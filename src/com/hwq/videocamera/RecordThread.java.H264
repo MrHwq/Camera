@@ -1,0 +1,120 @@
+package com.hwq.videocamera;
+
+import java.util.Timer;
+import java.util.TimerTask;
+
+import android.hardware.Camera;
+import android.media.MediaRecorder;
+import android.os.Environment;
+import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+
+public class RecordThread extends Thread {
+    private MediaRecorder mediarecorder;// 录制视频的类
+    private SurfaceHolder surfaceHolder;
+    private long recordTime;
+
+    public RecordThread(long recordTime, SurfaceView surfaceview,
+            SurfaceHolder surfaceHolder) {
+        this.recordTime = recordTime;
+        this.surfaceHolder = surfaceHolder;
+    }
+
+    @Override
+    public void run() {
+
+        /**
+         * 开始录像
+         */
+        startRecord();
+
+        /**
+         * 启动定时器，到规定时间recordTime后执行停止录像任务
+         */
+        Timer timer = new Timer();
+
+        timer.schedule(new TimerThread(), recordTime);
+    }
+
+    /**
+     * 获取摄像头实例对象
+     * 
+     * @return
+     */
+    public Camera getCameraInstance() {
+        Camera c = null;
+        try {
+            c = Camera.open();
+        } catch (Exception e) {
+            // 打开摄像头错误
+            Log.i("info", "打开摄像头错误");
+        }
+        return c;
+    }
+
+    /**
+     * 开始录像
+     */
+    public void startRecord() {
+        mediarecorder = new MediaRecorder();// 创建mediarecorder对象
+        // 设置录制视频源为Camera(相机)
+        mediarecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+        // 设置录制完成后视频的封装格式THREE_GPP为3gp.MPEG_4为mp4
+        mediarecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        // 设置录制的视频编码h263 h264
+        mediarecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        // 设置视频录制的分辨率。必须放在设置编码和格式的后面，否则报错
+        mediarecorder.setVideoSize(352, 288);
+        // 设置录制的视频帧率。必须放在设置编码和格式的后面，否则报错
+        mediarecorder.setVideoFrameRate(20);
+        mediarecorder.setPreviewDisplay(surfaceHolder.getSurface());
+        // 设置视频文件输出的路径
+        mediarecorder.setOutputFile(Environment.getExternalStorageDirectory()
+                .getAbsolutePath() + "/love.3gp");
+        try {
+            // 准备录制
+            mediarecorder.prepare();
+            // 开始录制
+            mediarecorder.start();
+            Timer timer = new Timer();
+
+            timer.schedule(new TimerThread(), 60000);
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 停止录制
+     */
+    public void stopRecord() {
+        if (mediarecorder != null) {
+            // 停止录制
+            mediarecorder.stop();
+            // 释放资源
+            mediarecorder.release();
+            mediarecorder = null;
+        }
+    }
+
+    /**
+     * 定时器
+     * 
+     * @author bcaiw
+     * 
+     */
+    class TimerThread extends TimerTask {
+
+        /**
+         * 停止录像
+         */
+        @Override
+        public void run() {
+            stopRecord();
+            this.cancel();
+        }
+    }
+}
